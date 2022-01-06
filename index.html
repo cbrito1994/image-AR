@@ -11,6 +11,8 @@
 </head>
 <body>
     <script type="module">
+        setupMobileDebug();
+        setInterval(logsForMobileDebug, 1000);
       // Unfortunately for now this example only works on Android phones and tablets!
       
       import { ARButton } from "https://unpkg.com/three@0.133.0/examples/jsm/webxr/ARButton.js";
@@ -21,6 +23,23 @@
 
       init();
       animate();
+
+        function setupMobileDebug() {
+            // First thing we do is setup the mobile debug console
+            // This library is very big so only use it while debugging
+            // just comment it out when your app is done
+            const containerEl = document.getElementById("console-ui");
+            eruda.init({
+                container: containerEl
+            });
+            const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
+            devToolEl.style.height = '40%'; // control the height of the dev tool panel
+        }
+        
+        let i = 0;
+        function logsForMobileDebug() {
+            console.log(i++);
+        }
 
       async function init() {
         const container = document.createElement("div");
