@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="style.css" />
+    <script src="https://unpkg.com/three@0.133.0/build/three.js" crossorigin="anonymous"></script>
+    <title>Document</title>
+</head>
+<body>
+    <script type="module">
+        // Unfortunately for now this example only works on Android phones and tablets!
+        
+        import { ARButton } from "https://unpkg.com/three@0.133.0/examples/jsm/webxr/ARButton.js";
+  
+        let camera, scene, renderer;
+        let mesh;
+        let image;
+  
+        init();
+        animate();
+  
+        async function init() {
+            const container = document.createElement("div");
+            document.body.appendChild(container);
+    
+            scene = new THREE.Scene();
+    
+            camera = new THREE.PerspectiveCamera(
+                70,
+                window.innerWidth / window.innerHeight,
+                0.01,
+                40
+            );
+    
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.xr.enabled = true;
+            container.appendChild(renderer.domElement);
+    
+            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+            light.position.set(0.5, 1, 0.25);
+            scene.add(light);
+  
+            // setup a cone mesh to put on top of the image target when it is seen
+            const radius = 0.2;
+            const height = 1;
+            const geometry = new THREE.ConeGeometry(radius, height, 32);
+            geometry.translate(0, height / 2, 0); // Because I want the cone to show right on top of the image we have to use the "height / 2" in "y" so that it positions itself on top of the image
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xffffff * Math.random(),
+                shininess: 6,
+                flatShading: true,
+                transparent: 1,
+                opacity: 1
+            });
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.matrixAutoUpdate = false; // important we have to set this to false because we'll update the position with the updateMesh() function manually, because by default threejs does it automatically
+            mesh.visible = false;
+            scene.add(mesh);
+            
+            // setup the image target
+            const url = "https://raw.githubusercontent.com/cbrito1994/Lindsey-AR/main/assets/lindsey-shatterMe.jpg";
+            const imgBitmap = await getImageBitmap(url);
+    
+            const button = ARButton.createButton(renderer, {
+                requiredFeatures: ['image-tracking'], // notice a new required feature
+                trackedImages: [
+                    {
+                        image:imgBitmap, // tell webxr this is the image target we want to track
+                        widthInMeters: 0.7 // We're passing the size of the image that we're gonna have in meters. This means that the imgBitmap is 0.7 meters aprox in the real world
+                    }
+                ]
+            });
+            document.body.appendChild(button);
+    
+            window.addEventListener("resize", onWindowResize, false);
+        }
+  
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+    
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+  
+        function animate() {
+            renderer.setAnimationLoop(render);
+        }
+        
+        async function getImageBitmap(url) {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const imageBitmap = await createImageBitmap(blob);
+            return imageBitmap;
+        };
+        
+        // update the cone mesh when the image target is found
+        function updateMesh(pose) {
+            mesh.matrix.fromArray(pose.transform.matrix); // It converts all the info of position and rotation from the pose (which again, represents where the image is) into the mesh
+            // Every time we use this kind of function we have to set the auto update of the mesh to false (line 60)
+        }
+  
+        function render(timestamp, frame) { // the timestamp of when the frame is rendering. The frame that's gonna have useful info about the pose, state of the camera and more
+            // We have to detect the image we want to track when it actually shows up in the scene
+            if(frame) { // If we are in AR or VR
+                const results = frame.getImageTrackingResults(); // Can you tell me if there are any images that we tracked and where they are. The resul is an array
+                for(const result of results) {
+                    // The result's index is the image's position in the trackedImages array specified at session creation
+                    const imageIndex = result.index;
+                    
+                    // Get the pose (position) of the image relative to a reference space and we're gonna transfer that into the mesh
+                    const referenceSpace = renderer.xr.getReferenceSpace(); // We're getting a reference space
+                    const pose = frame.getPose(result.imageSpace, referenceSpace); // Hey frame get the pose of the image inside of our reference space. What this const is storing is the accurate position and rotation of where the image was found
+                    
+                    const state = result.trackingState;
+                    console.log(state);
+                    if(state === "tracked") {
+                        // The image has been found and do something when image is tracked
+                        console.log("Image target has been found")
+                        mesh.visible = true;
+                        updateMesh(pose) // Update the position of the mesh based on the pose. Once we get the position of the image, we want to transfer that info into the mesh
+                    } else if(state === "emulated") {
+                        // The image has been lost and do something when image is lost
+                        mesh.visible = false; 
+                        console.log("Image target no longer seen")
+                    }
+                }
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
