@@ -4,30 +4,24 @@ let camera, scene, renderer;
 let mesh;
 let image;
 
-setupMobileDebug();
-setInterval(logsForMobileDebug, 1000);
+// const setupMobileDebug = () => {
+//     // First thing we do is setup the mobile debug console
+//     // This library is very big so only use it while debugging
+//     // just comment it out when your app is done
+//     const containerEl = document.getElementById("console-ui");
+//     eruda.init({
+//         container: containerEl
+//     });
+//     const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
+//     devToolEl.style.height = '40%'; // control the height of the dev tool panel
+// }
 
-init();
-animate();
+// let i = 0;
+// const logsForMobileDebug = () => {
+//     console.log(i++);
+// }
 
-function setupMobileDebug() {
-    // First thing we do is setup the mobile debug console
-    // This library is very big so only use it while debugging
-    // just comment it out when your app is done
-    const containerEl = document.getElementById("console-ui");
-    eruda.init({
-        container: containerEl
-    });
-    const devToolEl = containerEl.shadowRoot.querySelector('.eruda-dev-tools');
-    devToolEl.style.height = '40%'; // control the height of the dev tool panel
-}
-
-let i = 0;
-function logsForMobileDebug() {
-    console.log(i++);
-}
-
-async function init() {
+const init = async () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
 
@@ -50,10 +44,9 @@ async function init() {
     const loader = new THREE.GLTFLoader();
     const gltf = await loader.loadAsync(modelUrl);
     const model = gltf.scene;
-    model.scale.multiplyScalar(0.05);
+    model.scale.multiplyScalar(0.01);
     model.position.set(0, 0, -1);
-    model.rotation.y = THREE.Math.degToRad(90)
-    model.rotation.x = THREE.Math.degToRad(90)
+    model.rotation.x = THREE.Math.degToRad(30);
     scene.add(model);
 
     const button = ARButton.createButton(renderer);
@@ -62,17 +55,24 @@ async function init() {
     window.addEventListener("resize", onWindowResize, false);
 }
 
-function onWindowResize() {
+const onWindowResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function animate() {
+const animate = () => {
     renderer.setAnimationLoop(render);
 }
 
 const render = () => {
     renderer.render(scene, camera);
 }
+
+
+// setupMobileDebug();
+// setInterval(logsForMobileDebug, 1000);
+
+init();
+animate();
